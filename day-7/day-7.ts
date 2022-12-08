@@ -11,7 +11,7 @@ async function readInput() {
 
 const root = { name: "ROOT", size: 0, children: [] };
 
-async function findSmallDirectories() {
+async function readDisk() {
   const lines = await readInput();
   const stack: any[] = [root];
 
@@ -31,26 +31,6 @@ async function findSmallDirectories() {
     }
   };
 
-  const addSizes = (node) => {
-    if (node.children.length) {
-      for (const child of node.children) {
-        node.size += addSizes(child);
-      }
-    }
-
-    return node.size;
-  };
-
-  const findCandidates = (node, nodes = []) => {
-    if (node.size < sizeLimit) {
-      nodes.push({ name: node.name, size: node.size });
-    }
-
-    node.children.forEach((child) => findCandidates(child, nodes));
-
-    return nodes;
-  };
-
   const cd = "$ cd";
   const ls = "$ ls";
 
@@ -67,14 +47,53 @@ async function findSmallDirectories() {
     const size = Number(line.split(" ")[0]);
     stack[stack.length - 1].size += size;
   }
-
-  addSizes(root);
-
-  return findCandidates(root);
 }
 
-findSmallDirectories().then((nodes) => {
-  const sum = nodes.reduce((sum, next) => (next.size += sum), 0);
-  console.log(sum);
+const addSizes = (node = root) => {
+  if (node.children.length) {
+    for (const child of node.children) {
+      node.size += addSizes(child);
+    }
+  }
+
+  return node.size;
+};
+
+const findSmallDirectories = (node = root, nodes = []) => {
+  if (node.size < sizeLimit) {
+    nodes.push({ name: node.name, size: node.size });
+  }
+
+  node.children.forEach((child) => findSmallDirectories(child, nodes));
+
+  return nodes;
+};
+
+const findLargeDirectories = (minimumSize, node = root, nodes = []) => {
+  if (node.size >= minimumSize) {
+    nodes.push({ name: node.name, size: node.size });
+  }
+
+  node.children.forEach((child) =>
+    findLargeDirectories(minimumSize, child, nodes)
+  );
+
+  return nodes;
+};
+
+readDisk().then(() => {
+  addSizes();
+  const smallDirectories = findSmallDirectories();
+  const sum = smallDirectories.reduce((sum, next) => (next.size += sum), 0);
+  console.log("sum of small dirs", sum);
+
+  const unused = diskSize - root.size;
   console.log("root size", root.size);
+  console.log("unused size", unused);
+  console.log("required additional size", requiredSpace - unused);
+
+  const candidates = findLargeDirectories(requiredSpace - unused);
+  candidates.sort((a, b) => (a.size > b.size ? 1 : -1));
+
+  console.log("we should remove", candidates[0]);
 }, console.error);
