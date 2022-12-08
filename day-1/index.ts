@@ -1,6 +1,6 @@
-import input from "./day1-input";
+import input from "./input";
 
-function v2(input: string) {
+function part2(input: string) {
   const lines = input.trim().split("\n");
   const groups: Record<number, number[]> = {};
   const sums: Record<number, number> = {};
@@ -29,7 +29,7 @@ function v2(input: string) {
   console.log(top3, top3[0] + top3[1] + top3[2]);
 }
 
-function v1(input: string) {
+function part1(input: string) {
   const lines = input
     .trim()
     .split("\n")
@@ -56,5 +56,5 @@ function v1(input: string) {
   console.log(largest, largestId);
 }
 
-v1(input);
-v2(input);
+part1(input);
+part2(input);
