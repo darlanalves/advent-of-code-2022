@@ -2,6 +2,7 @@ import { readFile } from "fs/promises";
 
 type Crate = { crate: string };
 type CrateMap = Array<Array<Crate>>;
+type Instruction = { from: number; to: number; amount: number };
 
 const empty = "---";
 
@@ -10,32 +11,47 @@ async function main() {
   const lines = input.split("\n");
   const divider = lines.indexOf("");
   const crates = lines.slice(0, divider - 1);
-  const instructions = lines.slice(divider + 1);
-  const map = createMap(crates);
+  const instructions = parseInstructions(lines.slice(divider + 1));
 
+  const map = createMap(crates);
   viewMap(map);
   followInstructions(instructions, map);
   viewMap(map);
 }
 
-function followInstructions(instructions: string[], map: CrateMap) {
-  const matcher = /move (\d+) from (\d+) to (\d+)/;
+function followInstructions(
+  instructions: Instruction[],
+  map: CrateMap,
+  maxCratesPerMove = 1
+) {
   const locate = locateInMap(map);
   const locateEmpty = locateEmptyLayerInMap(map);
 
   for (const instruction of instructions) {
-    const matches = Array.from(instruction.match(matcher));
-    const [_, __, from, to] = matches;
-    let amount = Number(matches[1]);
+    const { from, to } = instruction;
+    while (instruction.amount) {
+      const crates = locate(from, maxCratesPerMove);
+      console.log(crates);
 
-    while (amount) {
-      const crate = locate(Number(from));
-      const emptyLayer = locateEmpty(Number(to));
+      crates.forEach((crate) => {
+        moveCrate(crate, locateEmpty(Number(to)));
+      });
 
-      moveCrate(crate, emptyLayer);
-      amount--;
+      instruction.amount -= maxCratesPerMove;
     }
   }
+}
+
+function parseInstructions(instructions: string[]) {
+  const matcher = /move (\d+) from (\d+) to (\d+)/;
+
+  return instructions.map((instruction) => {
+    const matches = Array.from(instruction.match(matcher));
+    let amount = Number(matches[1]);
+    const from = Number(matches[2]);
+    const to = Number(matches[3]);
+    return { amount, from, to };
+  });
 }
 
 function createMap(crates: string[]): CrateMap {
@@ -66,11 +82,21 @@ function moveCrate(from: Crate, to: Crate) {
 }
 
 function locateInMap(map: CrateMap) {
-  return (column: number) => {
+  return (column: number, maxCrates: number) => {
+    console.log("locate", column, maxCrates);
     column--;
+    const crates = [];
+    viewMap(map);
+
     for (const row of map) {
       if (row[column].crate !== empty) {
-        return row[column];
+        crates.push(row[column]);
+      }
+
+      maxCrates--;
+
+      if (maxCrates === 0) {
+        return crates;
       }
     }
   };
